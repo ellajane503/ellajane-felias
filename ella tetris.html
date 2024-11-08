@@ -1,0 +1,888 @@
+<html><head><base href="https://tetris-game.com/">
+<style>
+  body {
+    background: #111;
+    color: white;
+    font-family: 'Press Start 2P', monospace;
+    margin: 0;
+    padding: 20px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    overflow: hidden;
+    position: relative;
+  }
+
+  @keyframes flowerFall {
+    0% {
+      transform: translateY(-20px) rotate(0deg) scale(1);
+      opacity: 1;
+    }
+    50% {
+      transform: translateY(50vh) rotate(180deg) scale(1.5);
+      opacity: 0.8;
+    }
+    100% {
+      transform: translateY(100vh) rotate(360deg) scale(1);
+      opacity: 0;
+    }
+  }
+
+  @keyframes starShoot {
+    0% {
+      transform: translate(-50px, -50px) scale(0.2) rotate(0deg);
+      opacity: 0;
+    }
+    20% {
+      opacity: 1;
+    }
+    100% {
+      transform: translate(120vw, 120vh) scale(1.5) rotate(360deg);
+      opacity: 0;
+    }
+  }
+
+  @keyframes floatingText {
+    0% {
+      transform: translate(0, 0) rotate(0deg);
+      opacity: 0.4;
+    }
+    50% {
+      transform: translate(20px, -20px) rotate(5deg);
+      opacity: 0.8;
+    }
+    100% {
+      transform: translate(0, 0) rotate(0deg);
+      opacity: 0.4;
+    }
+  }
+
+  .game-title {
+    position: absolute;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 2.5em;
+    color: #fff;
+    text-shadow: 0 0 10px rgba(255,255,255,0.8),
+                 0 0 20px rgba(255,255,255,0.5),
+                 0 0 30px rgba(255,255,255,0.3);
+    font-family: 'Press Start 2P', monospace;
+    animation: floatingText 4s ease-in-out infinite;
+    z-index: 10;
+  }
+
+  .night-sky {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    z-index: -2;
+    overflow: hidden;
+  }
+
+  .moon {
+    position: absolute;
+    top: 50px;
+    right: 100px;
+    filter: drop-shadow(0 0 30px rgba(255, 255, 200, 0.4));
+  }
+
+  .cloud {
+    position: absolute;
+    opacity: 0.3;
+    filter: drop-shadow(0 0 20px rgba(255, 255, 255, 0.2));
+  }
+
+  .star-field {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+  }
+
+  @keyframes floatCloud {
+    0% { transform: translateX(-100%); }
+    100% { transform: translateX(100vw); }
+  }
+
+  .flower {
+    position: absolute;
+    pointer-events: none;
+    z-index: -1;
+    filter: drop-shadow(0 0 10px rgba(255,255,255,0.3));
+  }
+
+  .flower svg {
+    width: 40px;
+    height: 40px;
+  }
+
+  .shooting-star {
+    position: absolute;
+    pointer-events: none;
+    z-index: -1;
+    filter: drop-shadow(0 0 20px rgba(255,255,255,0.8));
+  }
+
+  .shooting-star svg {
+    width: 100px;
+    height: 100px;
+  }
+
+  .game-container {
+    display: flex;
+    gap: 20px;
+    margin-top: 80px;
+  }
+
+  .left-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    margin-right: 20px;
+  }
+
+  .right-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+  }
+
+  .board {
+    border: 2px solid #444;
+    background: rgba(0,0,0,0.8);
+    width: 240px !important;
+    height: 480px !important;
+  }
+
+  .next-piece, .hold-piece {
+    border: 2px solid #444;
+    padding: 10px;
+    background: rgba(0,0,0,0.8);
+    width: 200px;  
+    height: 200px; 
+  }
+
+  .next-piece canvas, .hold-piece canvas {
+    width: 200px;  
+    height: 200px; 
+  }
+
+  .hold-piece.disabled {
+    opacity: 0.5;
+  }
+
+  .next-piece h3, .hold-piece h3 {
+    margin: 0 0 5px 0;
+    font-size: 0.9em;
+  }
+
+  .score {
+    font-size: 1em;
+    text-align: center;
+    margin: 5px 0;
+  }
+
+  .controls {
+    text-align: left;
+    font-size: 0.7em;
+    line-height: 1.4;
+  }
+
+  .controls p {
+    margin: 3px 0;
+  }
+
+  .pause-button {
+    margin-top: 10px;
+    text-align: center;
+  }
+
+  .pause-button button {
+    background: rgba(255,255,255,0.1);
+    border: 2px solid #444;
+    color: white;
+    padding: 8px 16px;
+    font-family: 'Press Start 2P', monospace;
+    font-size: 0.8em;
+    cursor: pointer;
+    transition: all 0.3s ease;
+  }
+
+  .pause-button button:hover {
+    background: rgba(255,255,255,0.2);
+  }
+
+  .pause-overlay {
+    display: none;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: rgba(0,0,0,0.8);
+    padding: 20px;
+    border: 2px solid #444;
+    color: white;
+    text-align: center;
+    font-size: 1.5em;
+    z-index: 100;
+  }
+
+  .floating-text {
+    position: absolute;
+    color: #fff;
+    font-size: 12px;
+    pointer-events: none;
+    text-shadow: 0 0 5px rgba(255,255,255,0.8),
+                 0 0 10px rgba(255,255,255,0.5),
+                 0 0 15px rgba(255,255,255,0.3);
+    z-index: -1;
+    font-family: 'Press Start 2P', monospace;
+    animation: floatingText 4s ease-in-out infinite;
+    opacity: 0.6;
+  }
+
+  .game-over-overlay {
+    display: none;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: rgba(0,0,0,0.9);
+    padding: 20px;
+    border: 2px solid #444;
+    color: white;
+    text-align: center;
+    font-size: 1.5em;
+    z-index: 100;
+  }
+
+  .play-again-button {
+    background: rgba(255,255,255,0.1);
+    border: 2px solid #444;
+    color: white;
+    padding: 12px 24px;
+    font-family: 'Press Start 2P', monospace;
+    font-size: 0.8em;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    margin-top: 20px;
+  }
+
+  .play-again-button:hover {
+    background: rgba(255,255,255,0.2);
+  }
+</style>
+</head>
+<body>
+<div class="game-title">ELLA TETRIS</div>
+<div class="night-sky">
+  <svg class="moon" width="100" height="100" viewBox="0 0 100 100">
+    <circle cx="50" cy="50" r="45" fill="#FFFDE7"></circle>
+  </svg>
+  <svg class="star-field" width="100%" height="100%">
+    <circle cx="12%" cy="24%" r="1.5" fill="#FFF" opacity="0.6"></circle>
+    <circle cx="15%" cy="10%" r="1" fill="#FFF" opacity="0.5"></circle>
+    <circle cx="35%" cy="30%" r="3" fill="#FFF" opacity="0.3"></circle>
+    <circle cx="70%" cy="22%" r="1.5" fill="#FFF" opacity="0.4"></circle>
+    <circle cx="88%" cy="50%" r="2" fill="#FFF" opacity="0.7"></circle>
+    <circle cx="50%" cy="70%" r="1" fill="#FFF" opacity="0.8"></circle>
+    <circle cx="75%" cy="80%" r="2" fill="#FFF" opacity="0.5"></circle>
+    <circle cx="20%" cy="75%" r="1.5" fill="#FFF" opacity="0.7"></circle>
+    <circle cx="5%" cy="20%" r="2" fill="#FFF" opacity="0.6"></circle>
+    <circle cx="45%" cy="5%" r="2.5" fill="#FFF" opacity="0.3"></circle>
+    <circle cx="80%" cy="40%" r="1" fill="#FFF" opacity="0.4"></circle>
+    <circle cx="60%" cy="85%" r="1.5" fill="#FFF" opacity="0.5"></circle>
+    <circle cx="30%" cy="65%" r="2" fill="#FFF" opacity="0.6"></circle>
+    <circle cx="55%" cy="20%" r="1" fill="#FFF" opacity="0.5"></circle>
+    <circle cx="82%" cy="55%" r="1.5" fill="#FFF" opacity="0.7"></circle>
+    <circle cx="92%" cy="15%" r="2" fill="#FFF" opacity="0.4"></circle>
+    <circle cx="10%" cy="90%" r="1" fill="#FFF" opacity="0.6"></circle>
+    <circle cx="90%" cy="80%" r="1.5" fill="#FFF" opacity="0.3"></circle>
+    <circle cx="40%" cy="35%" r="2" fill="#FFF" opacity="0.5"></circle>
+    <circle cx="25%" cy="50%" r="3" fill="#FFF" opacity="0.8"></circle>
+    <circle cx="95%" cy="65%" r="1" fill="#FFF" opacity="0.2"></circle>
+    <circle cx="72%" cy="10%" r="1.5" fill="#FFF" opacity="0.6"></circle>
+    <circle cx="20%" cy="12%" r="2" fill="#FFF" opacity="0.7"></circle>
+    <circle cx="11%" cy="55%" r="1" fill="#FFF" opacity="0.3"></circle>
+    <circle cx="68%" cy="58%" r="1.5" fill="#FFF" opacity="0.4"></circle>
+    <circle cx="17%" cy="3%" r="2" fill="#FFF" opacity="0.5"></circle>
+    <circle cx="77%" cy="77%" r="2.5" fill="#FFF" opacity="0.6"></circle>
+    <circle cx="85%" cy="22%" r="1" fill="#FFF" opacity="0.2"></circle>
+    <circle cx="5%" cy="30%" r="2" fill="#FFF" opacity="0.4"></circle>
+    <circle cx="30%" cy="10%" r="1" fill="#FFF" opacity="0.5"></circle>
+    <circle cx="49%" cy="43%" r="1.5" fill="#FFF" opacity="0.6"></circle>
+    <circle cx="80%" cy="5%" r="2" fill="#FFF" opacity="0.7"></circle>
+    <circle cx="65%" cy="92%" r="1" fill="#FFF" opacity="0.4"></circle>
+    <circle cx="36%" cy="82%" r="2.5" fill="#FFF" opacity="0.3"></circle>
+    <circle cx="90%" cy="50%" r="1" fill="#FFF" opacity="0.5"></circle>
+    <circle cx="18%" cy="75%" r="1.75" fill="#FFF" opacity="0.6"></circle>
+    <circle cx="55%" cy="35%" r="2" fill="#FFF" opacity="0.4"></circle>
+    <circle cx="47%" cy="70%" r="1" fill="#FFF" opacity="0.5"></circle>
+    <circle cx="2%" cy="50%" r="1.5" fill="#FFF" opacity="0.6"></circle>
+    <circle cx="29%" cy="85%" r="2" fill="#FFF" opacity="0.3"></circle>
+    <circle cx="4%" cy="3%" r="1" fill="#FFF" opacity="0.5"></circle>
+    <circle cx="70%" cy="45%" r="2" fill="#FFF" opacity="0.2"></circle>
+    <circle cx="73%" cy="65%" r="1" fill="#FFF" opacity="0.6"></circle>
+    <circle cx="88%" cy="30%" r="1.5" fill="#FFF" opacity="0.7"></circle>
+    <circle cx="34%" cy="18%" r="3" fill="#FFF" opacity="0.8"></circle>
+  </svg>
+</div>
+<div class="game-container">
+  <div class="left-panel">
+    <div class="score">
+      <p>Score: <span id="score">0</span></p>
+      <p>Lines: <span id="lines">0</span></p>
+    </div>
+    <div class="controls">
+      <p>← → : Move</p>
+      <p>↑ : Rotate</p>
+      <p>↓ : Soft Drop</p>
+      <p>Space : Hard Drop</p>
+      <p>C : Hold/Swap</p>
+    </div>
+    <div class="pause-button">
+      <button id="pauseButton">Pause (P)</button>
+    </div>
+  </div>
+  <canvas id="board" class="board" width="240" height="480"></canvas>
+  <div class="right-panel">
+    <div class="hold-piece">
+      <h3>Hold (C):</h3>
+      <canvas id="holdPiece" width="200" height="200"></canvas>
+    </div>
+    <div class="next-piece">
+      <h3>Next:</h3>
+      <canvas id="nextPiece" width="200" height="200"></canvas>
+    </div>
+  </div>
+</div>
+<div class="pause-overlay">PAUSED</div>
+<div class="game-over-overlay">
+  GAME OVER
+  <br>
+  Score: <span id="finalScore">0</span>
+  <br>
+  <button class="play-again-button" id="playAgainButton">Play Again</button>
+</div>
+<script>
+const canvas = document.getElementById('board');
+const ctx = canvas.getContext('2d');
+const nextCanvas = document.getElementById('nextPiece');
+const nextCtx = nextCanvas.getContext('2d');
+const holdCanvas = document.getElementById('holdPiece');
+const holdCtx = holdCanvas.getContext('2d');
+const scoreElement = document.getElementById('score');
+const linesElement = document.getElementById('lines');
+
+const BLOCK_SIZE = 24;
+const PREVIEW_BLOCK_SIZE = 30; // Increased from 25 to better fill the larger space
+const ROWS = 20;
+const COLS = 10;
+let score = 0;
+let lines = 0;
+let gameOver = false;
+let isPaused = false;
+let board = Array(ROWS).fill().map(() => Array(COLS).fill(0));
+let currentPiece = null;
+let nextPiece = null;
+let holdPiece = null;
+let canHold = true;
+
+const PIECES = [
+  [[1,1,1,1]], // I
+  [[1,1,1],[0,1,0]], // T
+  [[1,1,1],[1,0,0]], // L
+  [[1,1,1],[0,0,1]], // J
+  [[1,1],[1,1]], // O
+  [[1,1,0],[0,1,1]], // S
+  [[0,1,1],[1,1,0]]  // Z
+];
+
+const COLORS = [
+  '#00f0f0', // cyan
+  '#a000f0', // purple
+  '#f0a000', // orange
+  '#0000f0', // blue
+  '#f0f000', // yellow
+  '#00f000', // green
+  '#f00000'  // red
+];
+
+const gameOverOverlay = document.querySelector('.game-over-overlay');
+const playAgainButton = document.getElementById('playAgainButton');
+const finalScore = document.getElementById('finalScore');
+
+class Piece {
+  constructor(shape, color) {
+    this.shape = shape;
+    this.color = color;
+    this.x = Math.floor(COLS/2) - Math.floor(shape[0].length/2);
+    this.y = 0;
+  }
+
+  rotate() {
+    const newShape = [];
+    for(let i = 0; i < this.shape[0].length; i++) {
+      newShape.push([]);
+      for(let j = this.shape.length - 1; j >= 0; j--) {
+        newShape[i].push(this.shape[j][i]);
+      }
+    }
+    if(this.canMove(0, 0, newShape)) {
+      this.shape = newShape;
+    }
+  }
+
+  canMove(dx, dy, shape = this.shape) {
+    for(let y = 0; y < shape.length; y++) {
+      for(let x = 0; x < shape[y].length; x++) {
+        if(shape[y][x]) {
+          const newX = this.x + x + dx;
+          const newY = this.y + y + dy;
+          if(newX < 0 || newX >= COLS || newY >= ROWS) return false;
+          if(newY >= 0 && board[newY][newX]) return false;
+        }
+      }
+    }
+    return true;
+  }
+}
+
+function createPiece() {
+  const index = Math.floor(Math.random() * PIECES.length);
+  return new Piece(PIECES[index], COLORS[index]);
+}
+
+function draw() {
+  ctx.fillStyle = '#111';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  for(let y = 0; y < ROWS; y++) {
+    for(let x = 0; x < COLS; x++) {
+      if(board[y][x]) {
+        ctx.fillStyle = board[y][x];
+        ctx.fillRect(x * BLOCK_SIZE, y * BLOCK_SIZE, BLOCK_SIZE-1, BLOCK_SIZE-1);
+      }
+    }
+  }
+
+  if(currentPiece) {
+    let shadowY = currentPiece.y;
+    while(currentPiece.canMove(0, shadowY - currentPiece.y + 1)) {
+      shadowY++;
+    }
+    
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.1)';
+    for(let y = 0; y < currentPiece.shape.length; y++) {
+      for(let x = 0; x < currentPiece.shape[y].length; x++) {
+        if(currentPiece.shape[y][x]) {
+          ctx.fillRect(
+            (currentPiece.x + x) * BLOCK_SIZE,
+            (shadowY + y) * BLOCK_SIZE,
+            BLOCK_SIZE-1,
+            BLOCK_SIZE-1
+          );
+        }
+      }
+    }
+  }
+
+  if(currentPiece) {
+    ctx.fillStyle = currentPiece.color;
+    for(let y = 0; y < currentPiece.shape.length; y++) {
+      for(let x = 0; x < currentPiece.shape[y].length; x++) {
+        if(currentPiece.shape[y][x]) {
+          ctx.fillRect(
+            (currentPiece.x + x) * BLOCK_SIZE,
+            (currentPiece.y + y) * BLOCK_SIZE,
+            BLOCK_SIZE-1,
+            BLOCK_SIZE-1
+          );
+        }
+      }
+    }
+  }
+
+  nextCtx.fillStyle = '#111';
+  nextCtx.fillRect(0, 0, nextCanvas.width, nextCanvas.height);
+  if(nextPiece) {
+    nextCtx.fillStyle = nextPiece.color;
+    const offsetX = (nextCanvas.width - (nextPiece.shape[0].length * PREVIEW_BLOCK_SIZE)) / 2;
+    const offsetY = (nextCanvas.height - (nextPiece.shape.length * PREVIEW_BLOCK_SIZE)) / 2;
+    
+    for(let y = 0; y < nextPiece.shape.length; y++) {
+      for(let x = 0; x < nextPiece.shape[y].length; x++) {
+        if(nextPiece.shape[y][x]) {
+          nextCtx.fillRect(
+            offsetX + x * PREVIEW_BLOCK_SIZE,
+            offsetY + y * PREVIEW_BLOCK_SIZE,
+            PREVIEW_BLOCK_SIZE-1,
+            PREVIEW_BLOCK_SIZE-1
+          );
+        }
+      }
+    }
+  }
+
+  holdCtx.fillStyle = '#111';
+  holdCtx.fillRect(0, 0, holdCanvas.width, holdCanvas.height);
+  if(holdPiece) {
+    holdCtx.fillStyle = holdPiece.color;
+    const offsetX = (holdCanvas.width - (holdPiece.shape[0].length * PREVIEW_BLOCK_SIZE)) / 2;
+    const offsetY = (holdCanvas.height - (holdPiece.shape.length * PREVIEW_BLOCK_SIZE)) / 2;
+    
+    for(let y = 0; y < holdPiece.shape.length; y++) {
+      for(let x = 0; x < holdPiece.shape[y].length; x++) {
+        if(holdPiece.shape[y][x]) {
+          holdCtx.fillRect(
+            offsetX + x * PREVIEW_BLOCK_SIZE,
+            offsetY + y * PREVIEW_BLOCK_SIZE,
+            PREVIEW_BLOCK_SIZE-1,
+            PREVIEW_BLOCK_SIZE-1
+          );
+        }
+      }
+    }
+  }
+}
+
+function mergePiece() {
+  for(let y = 0; y < currentPiece.shape.length; y++) {
+    for(let x = 0; x < currentPiece.shape[y].length; x++) {
+      if(currentPiece.shape[y][x]) {
+        if(currentPiece.y + y <= 0) {
+          gameOver = true;
+          gameOverOverlay.style.display = 'block';
+          finalScore.textContent = score;
+          return;
+        }
+        board[currentPiece.y + y][currentPiece.x + x] = currentPiece.color;
+      }
+    }
+  }
+  canHold = true;
+}
+
+function checkLines() {
+  let linesCleared = 0;
+  for(let y = ROWS - 1; y >= 0; y--) {
+    if(board[y].every(cell => cell !== 0)) {
+      board.splice(y, 1);
+      board.unshift(Array(COLS).fill(0));
+      linesCleared++;
+      y++;
+    }
+  }
+  if(linesCleared > 0) {
+    lines += linesCleared;
+    score += [0, 100, 300, 500, 800][linesCleared];
+    scoreElement.textContent = score;
+    linesElement.textContent = lines;
+  }
+}
+
+function holdCurrentPiece() {
+  if(!canHold) return;
+  
+  const temp = currentPiece;
+  if(holdPiece === null) {
+    holdPiece = new Piece(temp.shape, temp.color);
+    currentPiece = nextPiece;
+    nextPiece = createPiece();
+  } else {
+    currentPiece = new Piece(holdPiece.shape, holdPiece.color);
+    holdPiece = new Piece(temp.shape, temp.color);
+  }
+  canHold = false;
+  draw();
+}
+
+function togglePause() {
+  isPaused = !isPaused;
+  pauseButton.textContent = isPaused ? 'Resume (P)' : 'Pause (P)';
+  pauseOverlay.style.display = isPaused ? 'block' : 'none';
+  
+  if (!isPaused && !gameOver) {
+    gameLoop();
+  }
+}
+
+function gameLoop() {
+  if(gameOver || isPaused) return;
+  
+  if(!currentPiece || !nextPiece) {
+    currentPiece = currentPiece || createPiece();
+    nextPiece = nextPiece || createPiece();
+  }
+
+  if(currentPiece.canMove(0, 1)) {
+    currentPiece.y++;
+  } else {
+    mergePiece();
+    checkLines();
+    currentPiece = nextPiece;
+    nextPiece = createPiece();
+    if(gameOver) {
+      gameOverOverlay.style.display = 'block';
+      finalScore.textContent = score;
+      return;
+    }
+  }
+
+  draw();
+  if(!gameOver && !isPaused) {
+    setTimeout(gameLoop, 1000);
+  }
+}
+
+function resetGame() {
+  board = Array(ROWS).fill().map(() => Array(COLS).fill(0));
+  score = 0;
+  lines = 0;
+  gameOver = false;
+  currentPiece = createPiece();
+  nextPiece = createPiece();
+  holdPiece = null;
+  canHold = true;
+  scoreElement.textContent = '0';
+  linesElement.textContent = '0';
+  gameOverOverlay.style.display = 'none';
+  gameLoop();
+}
+
+playAgainButton.addEventListener('click', resetGame);
+
+document.addEventListener('keydown', (e) => {
+  if(!currentPiece || gameOver) return;
+
+  switch(e.keyCode) {
+    case 37: // Left
+      if(currentPiece.canMove(-1, 0)) currentPiece.x--;
+      break;
+    case 39: // Right
+      if(currentPiece.canMove(1, 0)) currentPiece.x++;
+      break;
+    case 40: // Down
+      if(currentPiece.canMove(0, 1)) currentPiece.y++;
+      break;
+    case 38: // Up
+      currentPiece.rotate();
+      break;
+    case 32: // Space
+      while(currentPiece.canMove(0, 1)) currentPiece.y++;
+      break;
+    case 67: // C key for hold
+      holdCurrentPiece();
+      break;
+    case 80: // P key
+      togglePause();
+      break;
+  }
+  draw();
+});
+
+// Add flower rain animation
+function createFlower() {
+  const flower = document.createElement('div');
+  flower.classList.add('flower');
+  
+  const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+  svg.setAttribute("width", "40");
+  svg.setAttribute("height", "40");
+  svg.setAttribute("viewBox", "0 0 40 40");
+  
+  const petals = document.createElementNS("http://www.w3.org/2000/svg", "path");
+  const centerCircle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+  const innerPetals = document.createElementNS("http://www.w3.org/2000/svg", "path");
+  
+  petals.setAttribute("d", "M20 0 L25 15 L40 20 L25 25 L20 40 L15 25 L0 20 L15 15 Z");
+  petals.setAttribute("fill", `hsl(${Math.random() * 360}, 90%, 70%)`);
+  
+  centerCircle.setAttribute("cx", "20");
+  centerCircle.setAttribute("cy", "20");
+  centerCircle.setAttribute("r", "5");
+  centerCircle.setAttribute("fill", `hsl(${Math.random() * 360}, 70%, 50%)`);
+  
+  innerPetals.setAttribute("d", "M20 10 L23 18 L32 20 L23 22 L20 30 L17 22 L8 20 L17 18 Z");
+  innerPetals.setAttribute("fill", `hsl(${Math.random() * 360}, 90%, 85%)`);
+  
+  svg.appendChild(petals);
+  svg.appendChild(innerPetals);
+  svg.appendChild(centerCircle);
+  
+  flower.appendChild(svg);
+  
+  flower.style.left = Math.random() * window.innerWidth + 'px';
+  const scale = 0.5 + Math.random() * 2;
+  flower.style.transform = `scale(${scale})`;
+  flower.style.animation = `flowerFall ${4 + Math.random() * 3}s ease-in-out forwards`;
+  
+  document.body.appendChild(flower);
+  
+  flower.addEventListener('animationend', () => {
+    document.body.removeChild(flower);
+  });
+}
+
+function createShootingStar() {
+  const star = document.createElement('div');
+  star.classList.add('shooting-star');
+  
+  const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+  svg.setAttribute("viewBox", "0 0 100 100");
+  
+  const starPath = document.createElementNS("http://www.w3.org/2000/svg", "path");
+  starPath.setAttribute("d", "M50 0 L61 35 L98 35 L68 57 L79 91 L50 70 L21 91 L32 57 L2 35 L39 35 Z");
+  
+  const gradient = document.createElementNS("http://www.w3.org/2000/svg", "linearGradient");
+  gradient.setAttribute("id", "starGradient" + Math.random().toString(36).substr(2, 9));
+  
+  const stop1 = document.createElementNS("http://www.w3.org/2000/svg", "stop");
+  stop1.setAttribute("offset", "0%");
+  stop1.setAttribute("stop-color", `hsl(${Math.random() * 60 + 40}, 90%, 70%)`);
+  
+  const stop2 = document.createElementNS("http://www.w3.org/2000/svg", "stop");
+  stop2.setAttribute("offset", "100%");
+  stop2.setAttribute("stop-color", `hsl(${Math.random() * 60 + 40}, 90%, 50%)`);
+  
+  gradient.appendChild(stop1);
+  gradient.appendChild(stop2);
+  svg.appendChild(gradient);
+  
+  starPath.setAttribute("fill", `url(#${gradient.id})`);
+  svg.appendChild(starPath);
+  star.appendChild(svg);
+  
+  star.style.left = Math.random() * window.innerWidth/2 + 'px';
+  star.style.top = Math.random() * window.innerHeight/2 + 'px';
+  
+  star.style.animation = `starShoot ${2 + Math.random() * 2}s ease-out forwards`;
+  
+  document.body.appendChild(star);
+  
+  star.addEventListener('animationend', () => {
+    document.body.removeChild(star);
+  });
+}
+
+function startFlowerRain() {
+  setInterval(createFlower, 200);
+}
+
+function startStarShooter() {
+  setInterval(createShootingStar, 1000);
+}
+
+function createFloatingText() {
+  const text = document.createElement('div');
+  text.classList.add('floating-text');
+  text.textContent = 'ella gwpa';
+  
+  text.style.left = Math.random() * window.innerWidth + 'px';
+  text.style.top = Math.random() * window.innerHeight + 'px';
+  
+  const duration = 3 + Math.random() * 4;
+  const delay = Math.random() * 2;
+  text.style.animationDuration = `${duration}s`;
+  text.style.animationDelay = `${delay}s`;
+  
+  document.body.appendChild(text);
+  
+  setTimeout(() => {
+    document.body.removeChild(text);
+  }, duration * 1000);
+}
+
+function startFloatingText() {
+  setInterval(createFloatingText, 500);
+  
+  for(let i = 0; i < 20; i++) {
+    createFloatingText();
+  }
+}
+
+function createNightSky() {
+  const nightSky = document.createElement('div');
+  nightSky.classList.add('night-sky');
+  
+  const moon = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+  moon.classList.add('moon');
+  moon.setAttribute("width", "100");
+  moon.setAttribute("height", "100");
+  moon.setAttribute("viewBox", "0 0 100 100");
+  
+  const moonCircle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+  moonCircle.setAttribute("cx", "50");
+  moonCircle.setAttribute("cy", "50");
+  moonCircle.setAttribute("r", "45");
+  moonCircle.setAttribute("fill", "#FFFDE7");
+  
+  moon.appendChild(moonCircle);
+  nightSky.appendChild(moon);
+  
+  const starField = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+  starField.classList.add('star-field');
+  starField.setAttribute("width", "100%");
+  starField.setAttribute("height", "100%");
+  
+  for(let i = 0; i < 50; i++) {
+    const star = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+    star.setAttribute("cx", Math.random() * 100 + "%");
+    star.setAttribute("cy", Math.random() * 100 + "%");
+    star.setAttribute("r", Math.random() * 2);
+    star.setAttribute("fill", "#FFF");
+    star.setAttribute("opacity", Math.random() * 0.8 + 0.2);
+    starField.appendChild(star);
+  }
+  
+  nightSky.appendChild(starField);
+  
+  function createCloud() {
+    const cloud = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    cloud.classList.add('cloud');
+    cloud.setAttribute("width", "200");
+    cloud.setAttribute("height", "100");
+    cloud.setAttribute("viewBox", "0 0 200 100");
+    
+    const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+    path.setAttribute("d", "M25,60 a20,20 0 0,1 0,-40 a30,30 0 0,1 60,0 a20,20 0 0,1 40,0 a20,20 0 0,1 0,40 z");
+    path.setAttribute("fill", "#FFF");
+    
+    cloud.appendChild(path);
+    cloud.style.top = Math.random() * 70 + "vh";
+    cloud.style.animation = `floatCloud ${20 + Math.random() * 30}s linear infinite`;
+    
+    nightSky.appendChild(cloud);
+    
+    cloud.addEventListener('animationend', () => {
+      nightSky.removeChild(cloud);
+    });
+  }
+  
+  for(let i = 0; i < 3; i++) {
+    createCloud();
+  }
+  setInterval(createCloud, 10000);
+  
+  document.body.insertBefore(nightSky, document.body.firstChild);
+}
+
+// Start the flower rain
+startFlowerRain();
+
+// Start the star shooter
+startStarShooter();
+
+// Start the floating text
+startFloatingText();
+
+// Create night sky
+createNightSky();
+
+// Start the game
+gameLoop();
+</script>
+</body></html>
